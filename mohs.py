@@ -1,7 +1,6 @@
 import pandas as pd
 import textwrap
 import numpy as np
-from scipy import stats
 import matplotlib.pyplot as plt
 import geopandas as gpd
 
@@ -37,7 +36,6 @@ data['Excisions_per_Mohs'] = data['Tot_Rounds']/data['Tot_Srvcs']
 sorted_by_excisions= data.sort_values(by='Tot_Srvcs', ascending=False).head()
 correlation = data['Tot_Srvcs'].corr(data['Excisions_per_Mohs']) 
 print("Correlation between Tot_Srvcs and Excisions_per_Mohs:", correlation)
-
 
 print(sorted_by_excisions)
 
@@ -85,12 +83,51 @@ ax_hi.axis('off')
 
 plt.show()
 
-'''
-# Create a scatterplot of Excisions_per_Mohs versus Tot_Srvcs
-filtered_data = data[data['Tot_Srvcs'] < 3000]
-plt.scatter(filtered_data['Tot_Srvcs'], filtered_data['Excisions_per_Mohs'])
-plt.xlabel('Total Services')
-plt.ylabel('Excisions per Mohs')
-plt.title('Excisions per Mohs Micographic Removal of Tumor vs. Total Services')
+import os
+
+# Get the list of CSV files in the 'data' folder
+folder_path = 'data'
+csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
+
+# Initialize an empty list to store the data frames
+dfs = []
+
+# Read each CSV file and add the 'year' column
+for file in csv_files:
+    year = file[-8:-4]  # Extract the year from the file name
+    df = pd.read_csv(os.path.join(folder_path, file))
+    df['year'] = year
+    dfs.append(df)
+
+# Combine all data frames into one large data frame
+combined_df = pd.concat(dfs)
+df_17311 = combined_df[combined_df['HCPCS_Cd'].isin([17311])]
+
+# Filter the combined data frame by HCPCS_Cd values 17311 and 17312
+filtered_df = combined_df[combined_df['HCPCS_Cd'].isin([17311, 17312])]
+doctors_to_remove = filtered_df.loc[(filtered_df['HCPCS_Cd'] == 17311) & (filtered_df['Tot_Srvcs'] < 20), 'Rndrng_NPI'].tolist()
+filtered_df = filtered_df[~filtered_df['Rndrng_NPI'].isin(doctors_to_remove)]
+
+# This groups filtered data into a bunch of small tables, one per doctor with two rows. Then takes the sum of Tot_Srvcs for both 17311 and 17312 and creates a table with Rndrng_NPI and tot_srvcs
+data = filtered_df.groupby(['Rndrng_NPI', 'year']).agg({'Tot_Srvcs': 'sum'}).reset_index()
+# This renames Tot_Srvcs to Tot_rounds because if you add 17311 and 17322 procedures it is the total number of rounds done
+data['Tot_Rounds'] = data['Tot_Srvcs']
+newdata = df_17311.groupby(['Rndrng_NPI', 'year']).agg({'Tot_Srvcs': 'sum'}).reset_index()
+# This line uses the table data_17311 and adds the total number of 17311 procedures done by each doctor to the table
+data['Tot_Srvcs'] = data.apply(lambda row: newdata.loc[(newdata['Rndrng_NPI'] == row['Rndrng_NPI']) & (newdata['year'] == row['year']), 'Tot_Srvcs'].values[0] if (row['Rndrng_NPI'] in newdata['Rndrng_NPI'].values) and (row['year'] in newdata['year'].values) else row['Tot_Srvcs'], axis=1)
+# This calculates excisions per mohs
+data['Excisions_per_Mohs'] = data['Tot_Rounds']/data['Tot_Srvcs']
+
+mean_excisions_per_year = data.groupby('year')['Excisions_per_Mohs'].mean().round(2)
+years = mean_excisions_per_year.index
+values = mean_excisions_per_year.values
+
+yearly_totals = data.groupby('year').agg({'Tot_Srvcs': 'sum', 'Tot_Rounds': 'sum'})
+yearly_totals['Excisions_per_Mohs'] = yearly_totals['Tot_Rounds']/yearly_totals['Tot_Srvcs']
+
+plt.plot(yearly_totals.index, yearly_totals['Excisions_per_Mohs'], marker='o')
+plt.xlabel('Year')
+plt.ylabel('Mean Stages per Mohs Procedure')
+plt.xticks(yearly_totals.index)
 plt.show()
-'''
+
