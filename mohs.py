@@ -21,8 +21,15 @@ print(df.head(10))
 # Filter the data for all rows where HCPCS_Cd equals 17311 and 17312
 filtered_data = df[df['HCPCS_Cd'].isin([17311, 17312])]
 data_17311 = df[df['HCPCS_Cd'].isin([17311])]
+# Sort data_17311 by Tot_Srvcs in ascending order
+sorted_data_17311 = data_17311.sort_values('Tot_Srvcs')
+# Print the sorted data
+print(sorted_data_17311)
+
+
 
 doctors_to_remove = filtered_data.loc[(filtered_data['HCPCS_Cd'] == 17311) & (filtered_data['Tot_Srvcs'] < 20), 'Rndrng_NPI'].tolist()
+print("Number of doctors included in doctors_to_remove:", len(doctors_to_remove))
 filtered_data = filtered_data[~filtered_data['Rndrng_NPI'].isin(doctors_to_remove)]
 filtered_data['Rndrng_NPI'].nunique()
 
