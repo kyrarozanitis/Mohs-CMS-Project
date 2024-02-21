@@ -3,6 +3,9 @@ import textwrap
 import numpy as np
 import matplotlib.pyplot as plt
 import geopandas as gpd
+import os
+import os
+import pandas as pd
 
 # Read the csv file and save it as a data frame
 df = pd.read_csv('Medicare_Physician_Other_Practitioners_by_Provider_and_Service_2021.csv')
@@ -59,23 +62,23 @@ state_count = mohs_physicians['Rndrng_Prvdr_State_Abrvtn'].value_counts().reset_
 state_count.columns = ['Rndrng_Prvdr_State_Abrvtn', 'state_count']
 
 # Load US states shapefile
-us_states = gpd.read_file("shapefiles\cb_2018_us_state_500k.shp")
+us_states = gpd.read_file("shapefiles/cb_2018_us_state_500k.shp")
 
 # Merge data with the shapefile
 us_states = us_states.merge(state_average, how='left', left_on='STUSPS', right_on='Rndrng_Prvdr_State_Abrvtn')
 
 # Create main plot for continental US
 fig, ax = plt.subplots(1, 1, figsize=(20, 10))
-us_states[~us_states['STUSPS'].isin(['HI', 'AK', 'PR', 'VI', 'GU', 'MP', 'AS'])].plot(column='Excisions_per_Mohs', cmap='YlGnBu', linewidth=0.8, ax=ax, edgecolor='0.8', legend=True)
+us_states[~us_states['STUSPS'].isin(['HI', 'AK', 'PR', 'VI', 'GU', 'MP', 'AS'])].plot(column='Excisions_per_Mohs', cmap='Blues', linewidth=0.8, ax=ax, edgecolor='0.8', legend=True)
 ax.set_title('Figure 2. Average Excisions per Mohs Procedure by State in 2021', fontsize=16, fontweight='bold')
 
 # Create inset for Alaska
 ax_ak = fig.add_axes([0.0, -0.25, 1, 1])  # position and size of the inset (left, bottom, width, height)
-us_states[us_states['STUSPS'] == 'AK'].plot(column='Excisions_per_Mohs', cmap='YlGnBu', linewidth=0.8, ax=ax_ak, edgecolor='0.8')
+us_states[us_states['STUSPS'] == 'AK'].plot(column='Excisions_per_Mohs', cmap='Blues', linewidth=0.8, ax=ax_ak, edgecolor='0.8')
 
 # Create inset for Hawaii
 ax_hi = fig.add_axes([-0.15, 0.1, 0.5, 0.5])  # position and size of the inset (left, bottom, width, height)
-us_states[us_states['STUSPS'] == 'HI'].plot(column='Excisions_per_Mohs', cmap='YlGnBu', linewidth=0.8, ax=ax_hi, edgecolor='0.8')
+us_states[us_states['STUSPS'] == 'HI'].plot(column='Excisions_per_Mohs', cmap='Blues', linewidth=0.8, ax=ax_hi, edgecolor='0.8')
 
 ax.axis('off')
 ax_ak.axis('off')
@@ -83,51 +86,60 @@ ax_hi.axis('off')
 
 plt.show()
 
-import os
 
-# Get the list of CSV files in the 'data' folder
-folder_path = 'data'
-csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
+def create_line_graph(folder_path):
+    """
+    Create a line graph showing the mean stages per Mohs procedure over the years.
 
-# Initialize an empty list to store the data frames
-dfs = []
+    Parameters:
+    - folder_path (str): The path to the folder containing the CSV files.
 
-# Read each CSV file and add the 'year' column
-for file in csv_files:
-    year = file[-8:-4]  # Extract the year from the file name
-    df = pd.read_csv(os.path.join(folder_path, file))
-    df['year'] = year
-    dfs.append(df)
+    Returns:
+    - None
+    """
 
-# Combine all data frames into one large data frame
-combined_df = pd.concat(dfs)
-df_17311 = combined_df[combined_df['HCPCS_Cd'].isin([17311])]
+    # Get the list of CSV files in the folder
+    csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
 
-# Filter the combined data frame by HCPCS_Cd values 17311 and 17312
-filtered_df = combined_df[combined_df['HCPCS_Cd'].isin([17311, 17312])]
-doctors_to_remove = filtered_df.loc[(filtered_df['HCPCS_Cd'] == 17311) & (filtered_df['Tot_Srvcs'] < 20), 'Rndrng_NPI'].tolist()
-filtered_df = filtered_df[~filtered_df['Rndrng_NPI'].isin(doctors_to_remove)]
+    # Initialize an empty list to store the data frames
+    dfs = []
 
-# This groups filtered data into a bunch of small tables, one per doctor with two rows. Then takes the sum of Tot_Srvcs for both 17311 and 17312 and creates a table with Rndrng_NPI and tot_srvcs
-data = filtered_df.groupby(['Rndrng_NPI', 'year']).agg({'Tot_Srvcs': 'sum'}).reset_index()
-# This renames Tot_Srvcs to Tot_rounds because if you add 17311 and 17322 procedures it is the total number of rounds done
-data['Tot_Rounds'] = data['Tot_Srvcs']
-newdata = df_17311.groupby(['Rndrng_NPI', 'year']).agg({'Tot_Srvcs': 'sum'}).reset_index()
-# This line uses the table data_17311 and adds the total number of 17311 procedures done by each doctor to the table
-data['Tot_Srvcs'] = data.apply(lambda row: newdata.loc[(newdata['Rndrng_NPI'] == row['Rndrng_NPI']) & (newdata['year'] == row['year']), 'Tot_Srvcs'].values[0] if (row['Rndrng_NPI'] in newdata['Rndrng_NPI'].values) and (row['year'] in newdata['year'].values) else row['Tot_Srvcs'], axis=1)
-# This calculates excisions per mohs
-data['Excisions_per_Mohs'] = data['Tot_Rounds']/data['Tot_Srvcs']
+    # Read each CSV file and add the 'year' column
+    for file in csv_files:
+        year = file[-8:-4]  # Extract the year from the file name
+        df = pd.read_csv(os.path.join(folder_path, file))
+        df['year'] = year
+        dfs.append(df)
 
-mean_excisions_per_year = data.groupby('year')['Excisions_per_Mohs'].mean().round(2)
-years = mean_excisions_per_year.index
-values = mean_excisions_per_year.values
+    # Combine all data frames into one large data frame
+    combined_df = pd.concat(dfs)
+    df_17311 = combined_df[combined_df['HCPCS_Cd'].isin([17311])]
 
-yearly_totals = data.groupby('year').agg({'Tot_Srvcs': 'sum', 'Tot_Rounds': 'sum'})
-yearly_totals['Excisions_per_Mohs'] = yearly_totals['Tot_Rounds']/yearly_totals['Tot_Srvcs']
+    # Filter the combined data frame by HCPCS_Cd values 17311 and 17312
+    filtered_df = combined_df[combined_df['HCPCS_Cd'].isin([17311, 17312])]
+    doctors_to_remove = filtered_df.loc[(filtered_df['HCPCS_Cd'] == 17311) & (filtered_df['Tot_Srvcs'] < 20), 'Rndrng_NPI'].tolist()
+    filtered_df = filtered_df[~filtered_df['Rndrng_NPI'].isin(doctors_to_remove)]
 
-plt.plot(yearly_totals.index, yearly_totals['Excisions_per_Mohs'], marker='o')
-plt.xlabel('Year')
-plt.ylabel('Mean Stages per Mohs Procedure')
-plt.xticks(yearly_totals.index)
-plt.show()
+    # Group filtered data by doctor and year, and calculate the sum of Tot_Srvcs
+    data = filtered_df.groupby(['Rndrng_NPI', 'year']).agg({'Tot_Srvcs': 'sum'}).reset_index()
+    data['Tot_Rounds'] = data['Tot_Srvcs']  # Rename Tot_Srvcs to Tot_Rounds
+    newdata = df_17311.groupby(['Rndrng_NPI', 'year']).agg({'Tot_Srvcs': 'sum'}).reset_index()
+    data['Tot_Srvcs'] = data.apply(lambda row: newdata.loc[(newdata['Rndrng_NPI'] == row['Rndrng_NPI']) & (newdata['year'] == row['year']), 'Tot_Srvcs'].values[0] if (row['Rndrng_NPI'] in newdata['Rndrng_NPI'].values) and (row['year'] in newdata['year'].values) else row['Tot_Srvcs'], axis=1)
+    data['Excisions_per_Mohs'] = data['Tot_Rounds'] / data['Tot_Srvcs']  # Calculate excisions per Mohs
+
+    # Calculate the mean stages per Mohs procedure for each year
+    mean_excisions_per_year = data.groupby('year')['Excisions_per_Mohs'].mean().round(2)
+    years = mean_excisions_per_year.index
+    values = mean_excisions_per_year.values
+
+    # Create a line graph
+    plt.plot(years, values, marker='o')
+    plt.xlabel('Year')
+    plt.ylabel('Mean Stages per Mohs Procedure')
+    plt.ylim(1.5, 1.8)
+    plt.xticks(years)
+    plt.show()
+
+create_line_graph('data')
+
 
