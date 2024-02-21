@@ -57,9 +57,11 @@ print("Range of the middle 95% of values in Excisions_per_Mohs:", range_95)
 
 # Create a histogram of Excisions_per_Mohs
 mean_value = data['Excisions_per_Mohs'].mean()
-plt.title('\n'.join(textwrap.wrap('Figure 1. U.S. Physicians Excisions per MOHS procedure in 2021', 40)), fontweight='bold', fontsize=16)
 plt.hist(data['Excisions_per_Mohs'], bins=30, range=(1, 4), color='lightblue', edgecolor='black')
 plt.axvline(mean_value, color='red', linestyle='dashed', label=f'Mean: {mean_value:.2f}')
+plt.xlabel('Mean Number of Stages per Procedure')
+plt.ylabel('Number of Physicians')
+plt.ylim(0, 500)
 plt.legend()
 plt.show()
 
