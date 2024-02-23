@@ -73,8 +73,7 @@ def calculate_excisions_per_mohs():
     upper_bound = np.percentile(excisions_per_mohs, 90)
     range_95 = (lower_bound, upper_bound)
     print("Range of the middle 95% of values in Excisions_per_Mohs:", range_95)
-
-# Create a histogram of Excisions_per_Mohs  
+  
 def create_histogram():    
     mean_value = data['Excisions_per_Mohs'].mean()
     plt.hist(data['Excisions_per_Mohs'], bins=30, range=(1, 4), color='lightblue', edgecolor='black')
@@ -115,7 +114,6 @@ def create_heat_map():
     ax_hi.axis('off')
 
     plt.show()
-
 
 def create_line_graph(folder_path):
     """
@@ -170,7 +168,9 @@ def create_line_graph(folder_path):
     plt.xticks(years)
     plt.show()
 
-create_line_graph('data')
-create_heat_map()
+calculate_excisions_per_mohs()
 create_histogram()
+create_heat_map()
+create_line_graph('data')
+
 
