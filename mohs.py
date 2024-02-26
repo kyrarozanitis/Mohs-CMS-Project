@@ -16,8 +16,6 @@ def calculate_excisions_per_mohs():
     removes doctors with less than 20 total services for a specific HCPCS code, groups the data by doctor,
     calculates the excisions per Mohs, and prints the results.
 
-    Returns:
-    None
     """
     # Read the csv file and save it as a data frame
     df = pd.read_csv('Medicare_Physician_Other_Practitioners_by_Provider_and_Service_2021.csv')
@@ -116,15 +114,6 @@ def create_heat_map():
     plt.show()
 
 def create_line_graph(folder_path):
-    """
-    Create a line graph showing the mean stages per Mohs procedure over the years.
-
-    Parameters:
-    - folder_path (str): The path to the folder containing the CSV files.
-
-    Returns:
-    - None
-    """
 
     # Get the list of CSV files in the folder
     csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
